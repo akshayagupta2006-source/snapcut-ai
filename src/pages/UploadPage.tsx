@@ -568,41 +568,66 @@ export default function UploadPage() {
 
   return (
     <div
-      className="min-h-screen bg-background flex flex-col"
+      className="min-h-screen bg-background flex flex-col relative overflow-hidden"
       onPaste={handlePaste}
     >
+      {/* Animated background gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5 pointer-events-none" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none animate-pulse" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+
       <Navbar />
-      <main className="flex-1 pt-20 pb-16 px-4 md:pt-24 md:px-6">
+      <main className="flex-1 pt-20 pb-16 px-4 md:pt-24 md:px-6 relative z-10">
         <div className="max-w-2xl mx-auto w-full">
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-8 md:mb-10"
           >
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-primary/10 border border-primary/20 rounded-full text-xs md:text-sm text-primary font-medium mb-4">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+              </span>
+              AI-Powered Background Removal
+            </div>
+
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display font-bold text-foreground mb-2 md:mb-3">
               Remove Background
             </h1>
-            <p className="text-sm md:text-lg text-muted-foreground">
+            <p className="text-sm md:text-lg text-muted-foreground max-w-md mx-auto">
               Upload an image and get a clean, transparent background instantly.
             </p>
+
+            {/* Tab buttons with glassmorphism */}
             <div className="flex justify-center gap-2 md:gap-3 mt-6 md:mt-8">
               <button
                 onClick={() => setView("upload")}
-                className={`px-4 py-2 md:px-6 md:py-2.5 rounded-lg text-xs md:text-sm font-semibold transition-all min-h-[44px] touch-target ${view === "upload" ? "bg-gradient-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-secondary"}`}
+                className={`px-4 py-2 md:px-6 md:py-2.5 rounded-lg text-xs md:text-sm font-semibold transition-all min-h-[44px] touch-target backdrop-blur-sm ${
+                  view === "upload"
+                    ? "bg-gradient-primary text-primary-foreground shadow-lg shadow-primary/30"
+                    : "bg-card/80 border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+                }`}
               >
                 📤 Upload
               </button>
               <button
                 onClick={() => setView("history")}
-                className={`px-4 py-2 md:px-6 md:py-2.5 rounded-lg text-xs md:text-sm font-semibold transition-all min-h-[44px] touch-target ${view === "history" ? "bg-gradient-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-secondary"}`}
+                className={`px-4 py-2 md:px-6 md:py-2.5 rounded-lg text-xs md:text-sm font-semibold transition-all min-h-[44px] touch-target backdrop-blur-sm ${
+                  view === "history"
+                    ? "bg-gradient-primary text-primary-foreground shadow-lg shadow-primary/30"
+                    : "bg-card/80 border border-border text-muted-foreground hover:text-foreground hover:bg-secondary/80"
+                }`}
               >
                 📋 History ({imageHistory.length})
               </button>
             </div>
+
             <div className="mt-6 md:mt-8">
               <button
                 onClick={handleUpgradeToPro}
-                className="px-6 py-2.5 md:px-8 md:py-3 rounded-xl font-semibold text-xs md:text-sm transition-all hover:opacity-90 active:scale-95 bg-gradient-primary text-primary-foreground cursor-pointer shadow-lg shadow-primary/20 min-h-[44px] touch-target"
+                className="px-6 py-2.5 md:px-8 md:py-3 rounded-xl font-semibold text-xs md:text-sm transition-all hover:opacity-90 active:scale-95 bg-gradient-primary text-primary-foreground cursor-pointer shadow-lg shadow-primary/30 min-h-[44px] touch-target"
               >
                 ⭐ Upgrade to Pro
               </button>
