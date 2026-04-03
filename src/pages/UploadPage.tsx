@@ -572,37 +572,37 @@ export default function UploadPage() {
       onPaste={handlePaste}
     >
       <Navbar />
-      <main className="flex-1 pt-24 pb-16 px-6">
-        <div className="max-w-2xl mx-auto">
+      <main className="flex-1 pt-20 pb-16 px-4 md:pt-24 md:px-6">
+        <div className="max-w-2xl mx-auto w-full">
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-10"
+            className="text-center mb-8 md:mb-10"
           >
-            <h1 className="text-4xl md:text-5xl font-display font-bold text-foreground mb-3">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display font-bold text-foreground mb-2 md:mb-3">
               Remove Background
             </h1>
-            <p className="text-muted-foreground text-lg">
+            <p className="text-sm md:text-lg text-muted-foreground">
               Upload an image and get a clean, transparent background instantly.
             </p>
-            <div className="flex justify-center gap-3 mt-8">
+            <div className="flex justify-center gap-2 md:gap-3 mt-6 md:mt-8">
               <button
                 onClick={() => setView("upload")}
-                className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all ${view === "upload" ? "bg-gradient-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-secondary"}`}
+                className={`px-4 py-2 md:px-6 md:py-2.5 rounded-lg text-xs md:text-sm font-semibold transition-all min-h-[44px] touch-target ${view === "upload" ? "bg-gradient-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-secondary"}`}
               >
                 📤 Upload
               </button>
               <button
                 onClick={() => setView("history")}
-                className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all ${view === "history" ? "bg-gradient-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-secondary"}`}
+                className={`px-4 py-2 md:px-6 md:py-2.5 rounded-lg text-xs md:text-sm font-semibold transition-all min-h-[44px] touch-target ${view === "history" ? "bg-gradient-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-secondary"}`}
               >
                 📋 History ({imageHistory.length})
               </button>
             </div>
-            <div className="mt-8">
+            <div className="mt-6 md:mt-8">
               <button
                 onClick={handleUpgradeToPro}
-                className="px-8 py-3 rounded-xl font-semibold text-sm transition-all hover:opacity-90 active:scale-95 bg-gradient-primary text-primary-foreground cursor-pointer shadow-lg shadow-primary/20"
+                className="px-6 py-2.5 md:px-8 md:py-3 rounded-xl font-semibold text-xs md:text-sm transition-all hover:opacity-90 active:scale-95 bg-gradient-primary text-primary-foreground cursor-pointer shadow-lg shadow-primary/20 min-h-[44px] touch-target"
               >
                 ⭐ Upgrade to Pro
               </button>
@@ -621,13 +621,13 @@ export default function UploadPage() {
                     exit={{ opacity: 0, scale: 0.97 }}
                   >
                     {/* Upload Method Tabs */}
-                    <div className="flex gap-3 mb-8 justify-center flex-wrap">
+                    <div className="flex gap-2 md:gap-3 mb-6 md:mb-8 justify-center flex-wrap">
                       <button
                         onClick={() => {
                           setUploadMethod("file");
                           stopCamera();
                         }}
-                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold transition-all ${
+                        className={`flex items-center gap-2 px-4 py-2.5 md:px-5 md:py-2.5 rounded-xl font-semibold transition-all min-h-[44px] touch-target text-sm md:text-base ${
                           uploadMethod === "file"
                             ? "bg-gradient-primary text-primary-foreground"
                             : "bg-card border border-border text-muted-foreground hover:text-foreground"
@@ -640,10 +640,9 @@ export default function UploadPage() {
 
                     {/* Paste hint */}
                     {uploadMethod === "file" && (
-                      <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 mb-6 text-center">
-                        <p className="text-sm text-blue-600 font-medium">
-                          💡 <strong>Keyboard Shortcut:</strong> Press Ctrl+V
-                          (or Cmd+V on Mac) to paste images directly
+                      <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-2.5 md:p-3 mb-4 md:mb-6 text-center">
+                        <p className="text-xs md:text-sm text-blue-600 font-medium">
+                          💡 <strong>Tip:</strong> Paste images with Ctrl+V or Cmd+V
                         </p>
                       </div>
                     )}
@@ -657,7 +656,7 @@ export default function UploadPage() {
                         }}
                         onDragLeave={() => setDragOver(false)}
                         onDrop={handleDrop}
-                        className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all cursor-pointer relative overflow-hidden ${
+                        className={`border-2 border-dashed rounded-2xl p-6 md:p-12 text-center transition-all cursor-pointer relative overflow-hidden ${
                           dragOver
                             ? "border-primary bg-primary/5"
                             : "border-border bg-card hover:border-muted-foreground"
@@ -670,10 +669,10 @@ export default function UploadPage() {
                             animate={{ opacity: 1 }}
                           />
                         )}
-                        <div className="relative z-10 space-y-6">
+                        <div className="relative z-10 space-y-4 md:space-y-6">
                           <label className="block cursor-pointer">
                             <motion.div
-                              className="w-24 h-24 mx-auto rounded-2xl bg-gradient-primary flex items-center justify-center hover:opacity-90 transition-opacity shadow-lg shadow-primary/20"
+                              className="w-16 h-16 md:w-24 md:h-24 mx-auto rounded-2xl bg-gradient-primary flex items-center justify-center hover:opacity-90 transition-opacity shadow-lg shadow-primary/20"
                               animate={{ y: [0, -8, 0] }}
                               transition={{
                                 duration: 2,
@@ -681,7 +680,7 @@ export default function UploadPage() {
                                 ease: "easeInOut",
                               }}
                             >
-                              <Upload className="w-10 h-10 text-primary-foreground" />
+                              <Upload className="w-8 h-8 md:w-10 md:h-10 text-primary-foreground" />
                             </motion.div>
                             <input
                               type="file"
@@ -691,16 +690,15 @@ export default function UploadPage() {
                             />
                           </label>
                           <div>
-                            <h3 className="text-2xl font-display font-semibold text-foreground mb-2">
+                            <h3 className="text-xl md:text-2xl font-display font-semibold text-foreground mb-2">
                               Drag & Drop Your Image
                             </h3>
-                            <p className="text-muted-foreground text-base">
-                              or click the arrow above, paste with Ctrl+V, or
-                              use the button below
+                            <p className="text-sm md:text-base text-muted-foreground">
+                              or click above, paste with Ctrl+V
                             </p>
                           </div>
-                          <label className="inline-flex items-center gap-2 px-8 py-3.5 bg-gradient-primary text-primary-foreground rounded-xl font-semibold cursor-pointer hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/20">
-                            <FileImage className="w-5 h-5" />
+                          <label className="inline-flex items-center gap-2 px-6 py-3 md:px-8 md:py-3.5 bg-gradient-primary text-primary-foreground rounded-xl font-semibold cursor-pointer hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/20 min-h-[44px] touch-target">
+                            <FileImage className="w-4 h-4 md:w-5 md:h-5" />
                             Choose Image
                             <input
                               type="file"
@@ -709,13 +707,13 @@ export default function UploadPage() {
                               onChange={handleInputChange}
                             />
                           </label>
-                          <div className="flex items-center justify-center gap-4 pt-2">
+                          <div className="flex items-center justify-center gap-3 md:gap-4 pt-2">
                             {["JPG", "PNG", "WEBP"].map((fmt) => (
                               <span
                                 key={fmt}
-                                className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-secondary px-4 py-2 rounded-full border border-border"
+                                className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-secondary px-3 py-1.5 md:px-4 md:py-2 rounded-full border border-border"
                               >
-                                <Image className="w-3.5 h-3.5" /> {fmt}
+                                <Image className="w-3 h-3 md:w-3.5 md:h-3.5" /> {fmt}
                               </span>
                             ))}
                           </div>
@@ -724,21 +722,21 @@ export default function UploadPage() {
                     )}
 
                     {/* Trust badges */}
-                    <div className="flex flex-wrap items-center justify-center gap-8 mt-10 pt-8 border-t border-border">
-                      <div className="flex items-center gap-2.5 text-sm">
-                        <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
+                    <div className="flex flex-wrap items-center justify-center gap-4 md:gap-8 mt-8 md:mt-10 pt-6 md:pt-8 border-t border-border">
+                      <div className="flex items-center gap-2 text-xs md:text-sm">
+                        <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 text-primary flex-shrink-0" />
                         <span className="text-muted-foreground">
                           Free to use
                         </span>
                       </div>
-                      <div className="flex items-center gap-2.5 text-sm">
-                        <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
+                      <div className="flex items-center gap-2 text-xs md:text-sm">
+                        <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 text-primary flex-shrink-0" />
                         <span className="text-muted-foreground">
                           No signup required
                         </span>
                       </div>
-                      <div className="flex items-center gap-2.5 text-sm">
-                        <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
+                      <div className="flex items-center gap-2 text-xs md:text-sm">
+                        <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 text-primary flex-shrink-0" />
                         <span className="text-muted-foreground">
                           Auto-deleted after use
                         </span>
