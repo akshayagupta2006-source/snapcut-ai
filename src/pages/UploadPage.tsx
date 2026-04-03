@@ -72,8 +72,10 @@ export default function UploadPage() {
       const userData = userInfo ? JSON.parse(userInfo) : null;
 
       // Step 1: Create order on backend
+      // Use environment variable for API URL, fallback to localhost for development
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
       const orderResponse = await fetch(
-        "http://localhost:3001/api/create-order",
+        `${apiBaseUrl}/api/create-order`,
         {
           method: "POST",
           headers: {
@@ -108,7 +110,7 @@ export default function UploadPage() {
 
           // Step 3: Verify payment on backend
           const verifyResponse = await fetch(
-            "http://localhost:3001/api/verify-payment",
+            `${apiBaseUrl}/api/verify-payment`,
             {
               method: "POST",
               headers: {
