@@ -645,126 +645,85 @@ export default function UploadPage() {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.97 }}
                   >
-                    {/* Upload Method Tabs */}
-                    <div className="flex gap-2 md:gap-3 mb-6 md:mb-8 justify-center flex-wrap">
-                      <button
-                        onClick={() => {
-                          setUploadMethod("file");
-                          stopCamera();
-                        }}
-                        className={`flex items-center gap-2 px-4 py-2.5 md:px-5 md:py-2.5 rounded-xl font-semibold transition-all min-h-[44px] touch-target text-sm md:text-base ${
-                          uploadMethod === "file"
-                            ? "bg-gradient-primary text-primary-foreground"
-                            : "bg-card border border-border text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        <Upload className="w-4 h-4" />
-                        Upload
-                      </button>
-                    </div>
+                    {/* Main Upload Area - Clean & Minimal */}
+                    <div
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setDragOver(true);
+                      }}
+                      onDragLeave={() => setDragOver(false)}
+                      onDrop={handleDrop}
+                      className={`relative rounded-3xl p-8 md:p-12 text-center transition-all cursor-pointer overflow-hidden ${
+                        dragOver
+                          ? "border-2 border-primary bg-primary/5 scale-[1.02]"
+                          : "bg-card/80 backdrop-blur-xl border border-border/60 hover:border-primary/40 hover:shadow-xl"
+                      }`}
+                    >
+                      {/* Animated gradient border */}
+                      <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-primary/20 via-transparent to-primary/20 opacity-0 hover:opacity-100 transition-opacity duration-500" />
 
-                    {/* Paste hint */}
-                    {uploadMethod === "file" && (
-                      <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-2.5 md:p-3 mb-4 md:mb-6 text-center">
-                        <p className="text-xs md:text-sm text-blue-600 font-medium">
-                          💡 <strong>Tip:</strong> Paste images with Ctrl+V or Cmd+V
-                        </p>
-                      </div>
-                    )}
-
-                    {/* File Upload */}
-                    {uploadMethod === "file" && (
-                      <div
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                          setDragOver(true);
-                        }}
-                        onDragLeave={() => setDragOver(false)}
-                        onDrop={handleDrop}
-                        className={`border-2 border-dashed rounded-2xl p-6 md:p-12 text-center transition-all cursor-pointer relative overflow-hidden ${
-                          dragOver
-                            ? "border-primary bg-primary/5"
-                            : "border-border bg-card hover:border-muted-foreground"
-                        }`}
-                      >
-                        {dragOver && (
-                          <motion.div
-                            className="absolute inset-0 bg-primary/5"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                          />
-                        )}
-                        <div className="relative z-10 space-y-4 md:space-y-6">
-                          <label className="block cursor-pointer">
+                      <div className="relative z-10">
+                        {/* Animated upload icon */}
+                        <div className="relative mx-auto mb-6">
+                          <div className="w-20 h-20 md:w-24 md:h-24 mx-auto rounded-2xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/30">
                             <motion.div
-                              className="w-16 h-16 md:w-24 md:h-24 mx-auto rounded-2xl bg-gradient-primary flex items-center justify-center hover:opacity-90 transition-opacity shadow-lg shadow-primary/20"
-                              animate={{ y: [0, -8, 0] }}
-                              transition={{
-                                duration: 2,
-                                repeat: Infinity,
-                                ease: "easeInOut",
-                              }}
+                              animate={{ y: [0, -10, 0] }}
+                              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                             >
-                              <Upload className="w-8 h-8 md:w-10 md:h-10 text-primary-foreground" />
+                              <Upload className="w-10 h-10 md:w-12 md:h-12 text-white" />
                             </motion.div>
-                            <input
-                              type="file"
-                              accept="image/jpeg,image/png,image/webp"
-                              className="hidden"
-                              onChange={handleInputChange}
-                            />
-                          </label>
-                          <div>
-                            <h3 className="text-xl md:text-2xl font-display font-semibold text-foreground mb-2">
-                              Drag & Drop Your Image
-                            </h3>
-                            <p className="text-sm md:text-base text-muted-foreground">
-                              or click above, paste with Ctrl+V
-                            </p>
                           </div>
-                          <label className="inline-flex items-center gap-2 px-6 py-3 md:px-8 md:py-3.5 bg-gradient-primary text-primary-foreground rounded-xl font-semibold cursor-pointer hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/20 min-h-[44px] touch-target">
-                            <FileImage className="w-4 h-4 md:w-5 md:h-5" />
-                            Choose Image
-                            <input
-                              type="file"
-                              accept="image/jpeg,image/png,image/webp"
-                              className="hidden"
-                              onChange={handleInputChange}
-                            />
-                          </label>
-                          <div className="flex items-center justify-center gap-3 md:gap-4 pt-2">
-                            {["JPG", "PNG", "WEBP"].map((fmt) => (
-                              <span
-                                key={fmt}
-                                className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-secondary px-3 py-1.5 md:px-4 md:py-2 rounded-full border border-border"
-                              >
-                                <Image className="w-3 h-3 md:w-3.5 md:h-3.5" /> {fmt}
-                              </span>
-                            ))}
-                          </div>
+                          {/* Glow effect */}
+                          <div className="absolute inset-0 rounded-2xl bg-primary/30 blur-xl animate-pulse" />
+                        </div>
+
+                        {/* Title */}
+                        <h2 className="text-xl md:text-2xl font-display font-bold text-foreground mb-2">
+                          Drop your image here
+                        </h2>
+                        <p className="text-sm text-muted-foreground mb-6">
+                          or click to browse • Supports JPG, PNG, WEBP
+                        </p>
+
+                        {/* Upload button */}
+                        <label className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-primary text-primary-foreground rounded-xl font-semibold cursor-pointer hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/25 min-h-[48px]">
+                          <FileImage className="w-5 h-5" />
+                          Select Image
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            className="hidden"
+                            onChange={handleInputChange}
+                          />
+                        </label>
+
+                        {/* Format badges */}
+                        <div className="flex items-center justify-center gap-3 mt-6">
+                          {["JPG", "PNG", "WEBP"].map((fmt) => (
+                            <span
+                              key={fmt}
+                              className="px-3 py-1 text-xs font-medium bg-secondary/80 text-muted-foreground rounded-full border border-border/50"
+                            >
+                              {fmt}
+                            </span>
+                          ))}
                         </div>
                       </div>
-                    )}
+                    </div>
 
-                    {/* Trust badges */}
-                    <div className="flex flex-wrap items-center justify-center gap-4 md:gap-8 mt-8 md:mt-10 pt-6 md:pt-8 border-t border-border">
-                      <div className="flex items-center gap-2 text-xs md:text-sm">
-                        <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 text-primary flex-shrink-0" />
-                        <span className="text-muted-foreground">
-                          Free to use
-                        </span>
+                    {/* Trust indicators - Minimal */}
+                    <div className="flex flex-wrap items-center justify-center gap-4 md:gap-6 mt-6 md:mt-8">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+                        Free
                       </div>
-                      <div className="flex items-center gap-2 text-xs md:text-sm">
-                        <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 text-primary flex-shrink-0" />
-                        <span className="text-muted-foreground">
-                          No signup required
-                        </span>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+                        No signup
                       </div>
-                      <div className="flex items-center gap-2 text-xs md:text-sm">
-                        <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5 text-primary flex-shrink-0" />
-                        <span className="text-muted-foreground">
-                          Auto-deleted after use
-                        </span>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+                        Private
                       </div>
                     </div>
                   </motion.div>
