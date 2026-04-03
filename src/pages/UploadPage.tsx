@@ -72,8 +72,8 @@ export default function UploadPage() {
       const userData = userInfo ? JSON.parse(userInfo) : null;
 
       // Step 1: Create order on backend
-      // Use environment variable for API URL, fallback to localhost for development
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
+      // Use environment variable for API URL, fallback to current origin for production
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || window.location.origin;
       const orderResponse = await fetch(
         `${apiBaseUrl}/api/create-order`,
         {
