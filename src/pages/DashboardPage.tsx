@@ -329,13 +329,22 @@ export default function DashboardPage() {
                                 variant="outline"
                                 size="sm"
                                 className="text-primary"
-                                onClick={() => {
-                                  const link = document.createElement("a");
-                                  link.href = item.originalImage;
-                                  link.download = `original-${item.fileName}`;
-                                  document.body.appendChild(link);
-                                  link.click();
-                                  document.body.removeChild(link);
+                                onClick={async () => {
+                                  try {
+                                    const response = await fetch(item.originalImage);
+                                    const blob = await response.blob();
+                                    const url = URL.createObjectURL(blob);
+                                    const link = document.createElement("a");
+                                    link.href = url;
+                                    link.download = `original-${item.fileName}`;
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+                                    URL.revokeObjectURL(url);
+                                  } catch (error) {
+                                    console.error("Error downloading image:", error);
+                                    alert("Failed to download image. Please try again.");
+                                  }
                                 }}
                               >
                                 <Download className="w-4 h-4 mr-2" />
@@ -345,13 +354,22 @@ export default function DashboardPage() {
                                 variant="outline"
                                 size="sm"
                                 className="text-primary"
-                                onClick={() => {
-                                  const link = document.createElement("a");
-                                  link.href = item.processedImage;
-                                  link.download = `processed-${item.fileName}`;
-                                  document.body.appendChild(link);
-                                  link.click();
-                                  document.body.removeChild(link);
+                                onClick={async () => {
+                                  try {
+                                    const response = await fetch(item.processedImage);
+                                    const blob = await response.blob();
+                                    const url = URL.createObjectURL(blob);
+                                    const link = document.createElement("a");
+                                    link.href = url;
+                                    link.download = `processed-${item.fileName}`;
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+                                    URL.revokeObjectURL(url);
+                                  } catch (error) {
+                                    console.error("Error downloading image:", error);
+                                    alert("Failed to download image. Please try again.");
+                                  }
                                 }}
                               >
                                 <Download className="w-4 h-4 mr-2" />

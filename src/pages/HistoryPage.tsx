@@ -66,6 +66,26 @@ export default function HistoryPage() {
   const visibleHistory = imageHistory.filter(
     (img) => !deletedIds.includes(img.id || ""),
   );
+
+  // Download handler for cross-origin images (e.g., Cloudinary)
+  const handleDownload = async (imageUrl: string, fileName: string) => {
+    try {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading image:", error);
+      alert("Failed to download image. Please try again.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
@@ -184,6 +204,12 @@ export default function HistoryPage() {
                                 variant="outline"
                                 size="sm"
                                 className="text-primary"
+                                onClick={() =>
+                                  handleDownload(
+                                    item.originalImage,
+                                    `original-${item.fileName}`,
+                                  )
+                                }
                               >
                                 <Download className="w-4 h-4 mr-2" />
                                 Download Original
@@ -192,6 +218,12 @@ export default function HistoryPage() {
                                 variant="outline"
                                 size="sm"
                                 className="text-primary"
+                                onClick={() =>
+                                  handleDownload(
+                                    item.processedImage,
+                                    `processed-${item.fileName}`,
+                                  )
+                                }
                               >
                                 <Download className="w-4 h-4 mr-2" />
                                 Download Result
@@ -213,9 +245,7 @@ export default function HistoryPage() {
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                   <AlertDialogHeader>
-                                    <AlertDialogTitle>
-                                      Delete Image
-                                    </AlertDialogTitle>
+                                    <AlertDialogTitle>Delete Image</AlertDialogTitle>
                                     <AlertDialogDescription>
                                       Are you sure you want to delete{" "}
                                       {item.fileName}? This action cannot be

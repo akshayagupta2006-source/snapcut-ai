@@ -58,12 +58,18 @@ export default function UploadPage() {
     if (import.meta.env.DEV) {
       console.log("handleUpgradeToPro called");
     }
+
+    // Check if Razorpay SDK is loaded
     if (!(window as any).Razorpay) {
       console.error(
         "Razorpay SDK not loaded. Check if the script is loaded in index.html.",
       );
-      alert("Razorpay SDK is not loaded. Please try again later.");
-      return;
+      // Wait a bit and retry for slow mobile connections
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!(window as any).Razorpay) {
+        alert("Payment system is loading. Please try again in a few seconds.");
+        return;
+      }
     }
 
     try {
@@ -73,7 +79,16 @@ export default function UploadPage() {
 
       // Step 1: Create order on backend
       // Use environment variable for API URL, fallback to current origin for production
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || window.location.origin;
+      // This ensures mobile devices use the correct deployed URL
+      let apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+      if (!apiBaseUrl) {
+        apiBaseUrl = window.location.origin;
+      }
+      // Remove trailing slash if present
+      apiBaseUrl = apiBaseUrl.replace(/\/$/, '');
+
+      console.log("Using API Base URL:", apiBaseUrl);
+
       const orderResponse = await fetch(
         `${apiBaseUrl}/api/create-order`,
         {
@@ -90,54 +105,67 @@ export default function UploadPage() {
       );
 
       if (!orderResponse.ok) {
-        throw new Error("Failed to create order");
+        const errorText = await orderResponse.text();
+        console.error("Order creation failed:", orderResponse.status, errorText);
+        throw new Error(`Failed to create order: ${orderResponse.status}`);
       }
 
-      const { orderId } = await orderResponse.json();
+      const orderData = await orderResponse.json();
+      const orderId = orderData.orderId;
+
+      if (!orderId) {
+        throw new Error("No order ID received from server");
+      }
+
+      console.log("Order created:", orderId);
 
       // Step 2: Open Razorpay payment with order ID
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
         order_id: orderId,
-        amount: 50000, // Amount in paise
+        amount: 50000, // Amount in paise (₹500 * 100)
         currency: "INR",
         name: "SnapCut AI",
         description: "Upgrade to Pro Plan",
         handler: async function (response: any) {
-          if (import.meta.env.DEV) {
-            console.log("Payment verified - Payment ID:", response.razorpay_payment_id);
-          }
+          console.log("Payment response:", response);
 
           // Step 3: Verify payment on backend
-          const verifyResponse = await fetch(
-            `${apiBaseUrl}/api/verify-payment`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                orderId: response.razorpay_order_id,
-                paymentId: response.razorpay_payment_id,
-                signature: response.razorpay_signature,
-              }),
-            }
-          );
+          try {
+            const verifyResponse = await fetch(
+              `${apiBaseUrl}/api/verify-payment`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  orderId: response.razorpay_order_id,
+                  paymentId: response.razorpay_payment_id,
+                  signature: response.razorpay_signature,
+                }),
+              }
+            );
 
-          const verifyData = await verifyResponse.json();
+            const verifyData = await verifyResponse.json();
 
-          if (verifyData.success) {
-            alert("✅ Payment Successful!");
-            // Update user plan in localStorage
-            if (userData) {
-              userData.plan = "pro";
-              userData.credits = 1000;
-              userData.planUpgradeDate = new Date().toISOString();
-              localStorage.setItem("user", JSON.stringify(userData));
+            if (verifyData.success) {
+              // Update user plan in localStorage
+              if (userData) {
+                userData.plan = "pro";
+                userData.credits = 1000;
+                userData.planUpgradeDate = new Date().toISOString();
+                localStorage.setItem("user", JSON.stringify(userData));
+              }
+              alert("✅ Payment Successful! You've been upgraded to Pro.");
+              navigate("/dashboard");
+            } else {
+              console.error("Payment verification failed:", verifyData);
+              alert("❌ Payment verification failed. Please contact support with payment ID: " + response.razorpay_payment_id);
             }
-            navigate("/dashboard");
-          } else {
-            alert("❌ Payment verification failed. Please contact support.");
+          } catch (verifyError) {
+            console.error("Verification error:", verifyError);
+            alert("⚠️ Payment made but verification failed. Please contact support with payment ID: " + response.razorpay_payment_id);
           }
         },
         prefill: {
@@ -148,13 +176,27 @@ export default function UploadPage() {
         theme: {
           color: "#3399cc",
         },
+        // Mobile-specific optimizations
+        modal: {
+          ondismiss: function() {
+            console.log("Payment modal dismissed");
+          }
+        }
       };
 
       const rzp1 = new (window as any).Razorpay(options);
+
+      // Handle payment errors
+      rzp1.on('payment.failed', function(response: any) {
+        console.error("Payment failed:", response.error);
+        alert("❌ Payment failed: " + (response.error.description || "Please try again"));
+      });
+
       rzp1.open();
     } catch (error) {
       console.error("Error during payment:", error);
-      alert("Failed to process payment. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      alert("Failed to process payment: " + errorMessage + ". Please try again.");
     }
   }, [navigate]);
 
