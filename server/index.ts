@@ -3,6 +3,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import Razorpay from "razorpay";
 import crypto from "crypto";
+import axios from "axios";
+import FormData from "form-data";
 
 dotenv.config();
 
@@ -11,7 +13,9 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+// Increase body size limit to 10MB for image processing
+app.use(express.json({ limit: '10mb' }));
+app.use(express.raw({ limit: '10mb', type: 'image/*' }));
 
 // Initialize Razorpay with secret key (only on backend)
 const razorpay = new Razorpay({
@@ -33,13 +37,32 @@ app.post("/api/create-order", async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Amount is required" });
     }
 
+    // Check if Razorpay is properly configured
+    const keyId = process.env.RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    
+    console.log("Razorpay Config Check:", {
+      keyIdConfigured: !!keyId,
+      keySecretConfigured: !!keySecret,
+      keyIdPrefix: keyId ? keyId.substring(0, 8) + "..." : "none"
+    });
+
+    if (!keyId || !keySecret) {
+      console.error("Razorpay credentials not configured properly");
+      return res.status(500).json({ 
+        error: "Payment system not configured. Please check server environment variables." 
+      });
+    }
+
     const options = {
       amount: amount * 100, // Convert to paise
       currency,
       receipt: receipt || `receipt-${Date.now()}`,
     };
 
+    console.log("Creating Razorpay order:", options);
     const order = await razorpay.orders.create(options);
+    console.log("Order created successfully:", order.id);
 
     res.json({
       success: true,
@@ -47,9 +70,19 @@ app.post("/api/create-order", async (req: Request, res: Response) => {
       amount: order.amount,
       currency: order.currency,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating order:", error);
-    res.status(500).json({ error: "Failed to create order" });
+    console.error("Error details:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    
+    let errorMessage = "Failed to create order";
+    if (error.error) {
+      errorMessage += ": " + (error.error.description || JSON.stringify(error.error));
+    }
+    
+    res.status(500).json({ 
+      error: errorMessage,
+      details: error.message 
+    });
   }
 });
 
@@ -165,6 +198,77 @@ app.post("/api/webhook", (req: Request, res: Response) => {
   } catch (error) {
     console.error("Webhook error:", error);
     res.status(500).json({ error: "Webhook processing failed" });
+  }
+});
+
+// Background removal endpoint using remove.bg API
+app.post("/api/remove-background", async (req: Request, res: Response) => {
+  try {
+    const apiKey = process.env.REMOVE_BG_API_KEY;
+    
+    if (!apiKey) {
+      return res.status(500).json({ 
+        error: "Background removal API key not configured. Please set REMOVE_BG_API_KEY environment variable." 
+      });
+    }
+
+    // Get image from request body (base64) or raw buffer
+    let imageBuffer: Buffer;
+    
+    if (req.body && req.body.image) {
+      // Handle base64 encoded image
+      const base64Data = req.body.image.replace(/^data:image\/\w+;base64,/, "");
+      imageBuffer = Buffer.from(base64Data, "base64");
+    } else if (req.get("Content-Type")?.includes("image/")) {
+      // Handle raw image data
+      imageBuffer = req.body;
+    } else {
+      return res.status(400).json({ error: "No image data provided" });
+    }
+
+    // Call remove.bg API
+    const formData = new FormData();
+    formData.append("image_file", imageBuffer, { filename: "image.png" });
+
+    const response = await axios.post(
+      "https://api.remove.bg/v1.0/removebg",
+      formData,
+      {
+        headers: {
+          ...formData.getHeaders(),
+          "X-Api-Key": apiKey,
+        },
+        responseType: "arraybuffer",
+      }
+    );
+
+    // Convert response to base64
+    const resultBase64 = Buffer.from(response.data).toString("base64");
+    const imageUrl = `data:image/png;base64,${resultBase64}`;
+
+    res.json({ 
+      success: true, 
+      url: imageUrl 
+    });
+  } catch (error: any) {
+    console.error("Background removal error:", error.response?.data || error.message);
+    
+    if (error.response?.status === 401) {
+      return res.status(401).json({ 
+        error: "Invalid API key. Please check your REMOVE_BG_API_KEY." 
+      });
+    }
+    
+    if (error.response?.status === 402) {
+      return res.status(402).json({ 
+        error: "API credits exhausted. Please upgrade your remove.bg plan." 
+      });
+    }
+
+    res.status(500).json({ 
+      error: "Failed to remove background", 
+      details: error.response?.data ? error.response.data.toString() : error.message 
+    });
   }
 });
 

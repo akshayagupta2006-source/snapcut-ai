@@ -221,33 +221,40 @@ export default function UploadPage() {
     setProgress(10);
 
     try {
-      console.log("Attempting to read file as ArrayBuffer...");
-      const arrayBuffer = await file.arrayBuffer();
-      console.log("File read as ArrayBuffer. Size:", arrayBuffer.byteLength);
+      console.log("Reading file as base64...");
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      console.log("File converted to base64. Length:", base64.length);
 
       setProgress(30);
 
+      // Determine API base URL - use local server for development
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || 
+                         (import.meta.env.DEV ? "http://localhost:3001" : window.location.origin);
+
       console.log(
-        "Sending request to webhook:",
-        "https://gupta2006.app.n8n.cloud/webhook/background_remover",
+        "Sending request to local server:",
+        `${apiBaseUrl}/api/remove-background`,
       );
-      const response = await fetch(
-        "https://gupta2006.app.n8n.cloud/webhook/background_remover",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": file.type,
-          },
-          body: arrayBuffer,
+      
+      const response = await fetch(`${apiBaseUrl}/api/remove-background`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+        body: JSON.stringify({ image: base64 }),
+      });
 
       setProgress(70);
-      console.log("Webhook response received. Status:", response.status);
+      console.log("Server response received. Status:", response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("Webhook response not OK. Error:", errorText);
+        console.error("Server response not OK. Error:", errorText);
         setStage("error");
         throw new Error(
           `HTTP error! status: ${response.status}, message: ${errorText}`,

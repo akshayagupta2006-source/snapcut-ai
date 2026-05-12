@@ -24,6 +24,10 @@ PORT=3001
 RAZORPAY_KEY_ID=rzp_test_SYcc6gZydQ5Yp7
 RAZORPAY_KEY_SECRET=3FSPOvINCaAYhuIQHRqf5JYV
 RAZORPAY_WEBHOOK_SECRET=your_webhook_secret_here
+
+# Background Removal API Key (get free key from https://www.remove.bg/api)
+# Sign up at remove.bg to get a free API key (50 free previews/month)
+REMOVE_BG_API_KEY=your_remove_bg_api_key_here
 ```
 
 **⚠️ IMPORTANT**: Never commit `.env` file to version control. Add it to `.gitignore`.
@@ -87,6 +91,21 @@ Content-Type: application/json
 POST /api/webhook
 ```
 Receives payment events from Razorpay.
+
+### 6. Remove Background (NEW!)
+```
+POST /api/remove-background
+Content-Type: application/json
+
+{
+  "image": "data:image/png;base64,iVBORw0KGgo..."
+}
+```
+Removes background from an image using the remove.bg API.
+Returns the processed image as a base64-encoded PNG.
+
+**Note**: Requires `REMOVE_BG_API_KEY` to be set in `.env`.
+Get a free API key from https://www.remove.bg/api (50 free previews/month).
 
 ## Security Features
 
