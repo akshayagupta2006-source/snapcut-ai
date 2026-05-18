@@ -233,8 +233,8 @@ export default function UploadPage() {
       setProgress(30);
 
       // Determine API base URL - use local server for development
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || 
-                         (import.meta.env.DEV ? "http://localhost:3001" : window.location.origin);
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || 
+                       (import.meta.env.DEV ? "http://localhost:5000" : window.location.origin);
 
       console.log(
         "Sending request to local server:",

@@ -32,7 +32,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     hmac.update(`${orderId}|${paymentId}`);
     const generatedSignature = hmac.digest('hex');
 
-    if (generatedSignature === signature) {
+if (generatedSignature.length === signature.length && crypto.timingSafeEqual(Buffer.from(generatedSignature), Buffer.from(signature))) {
       // Payment is valid
       res.status(200).json({
         success: true,

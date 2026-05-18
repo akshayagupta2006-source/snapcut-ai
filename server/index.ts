@@ -4,7 +4,8 @@ import dotenv from "dotenv";
 import Razorpay from "razorpay";
 import crypto from "crypto";
 import axios from "axios";
-import FormData from "form-data";
+import FormDataImport from "form-data";
+const FormData = (FormDataImport as any).default || FormDataImport;
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ app.get("/health", (req: Request, res: Response) => {
 
 // Create payment order
 app.post("/api/create-order", async (req: Request, res: Response) => {
+  console.log("Create order route hit");
   try {
     const { amount, currency = "INR", receipt } = req.body;
 

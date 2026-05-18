@@ -95,24 +95,24 @@ export default function BillingPage() {
     }
 
     try {
-      let apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
-      if (!apiBaseUrl) {
-        apiBaseUrl = window.location.origin;
-      }
-      apiBaseUrl = apiBaseUrl.replace(/\/$/, '');
+let apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+if (!apiBaseUrl) {
+  // Default to backend server running on port 5000 (backend server)
+  const origin = window.location.origin.replace(/:\d+$/, '');
+  apiBaseUrl = `${origin}:5000`;
+}
+apiBaseUrl = apiBaseUrl.replace(/\/$/, '');
 
-      const orderResponse = await fetch(
-        `${apiBaseUrl}/api/create-order`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            amount: 500,
-            currency: "INR",
-            receipt: `receipt-${Date.now()}`,
-          }),
-        }
-      );
+console.log("Creating order with URL:", `${apiBaseUrl}/api/create-order`);
+const orderResponse = await fetch(`${apiBaseUrl}/api/create-order`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    amount: 500,
+    currency: "INR",
+    receipt: `receipt-${Date.now()}`,
+  }),
+});
 
       if (!orderResponse.ok) {
         throw new Error("Failed to create order");

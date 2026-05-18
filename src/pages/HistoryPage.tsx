@@ -38,8 +38,7 @@ const uploadHistory = [
 ];
 
 export default function HistoryPage() {
-  const { imageHistory } = useImageHistory();
-  const [deletedIds, setDeletedIds] = useState<string[]>([]);
+  const { imageHistory, deleteImage } = useImageHistory();
 
   // Format timestamp to readable date
   const formatDate = (timestamp: number) => {
@@ -62,10 +61,7 @@ export default function HistoryPage() {
     return "Just now";
   };
 
-  // Filter out deleted images
-  const visibleHistory = imageHistory.filter(
-    (img) => !deletedIds.includes(img.id || ""),
-  );
+
 
   // Download handler for cross-origin images (e.g., Cloudinary)
   const handleDownload = async (imageUrl: string, fileName: string) => {
@@ -118,7 +114,7 @@ export default function HistoryPage() {
               </p>
             </div>
 
-            {visibleHistory.length === 0 ? (
+            {imageHistory.length === 0 ? (
               <Card className="border-border bg-card text-center py-12">
                 <ImageIcon className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium text-foreground mb-2">
@@ -133,7 +129,7 @@ export default function HistoryPage() {
               </Card>
             ) : (
               <div className="grid grid-cols-1 gap-6">
-                {visibleHistory.map((item, index) => (
+                {imageHistory.map((item, index) => (
                   <motion.div
                     key={item.id}
                     initial={{ opacity: 0, y: 10 }}
@@ -228,7 +224,23 @@ export default function HistoryPage() {
                                 <Download className="w-4 h-4 mr-2" />
                                 Download Result
                               </Button>
-                              <Button variant="outline" size="sm">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const shareText = `Check out my image processed with SnapCut AI! ${window.location.origin}`;
+                                  if (navigator.share) {
+                                    navigator.share({
+                                      title: "SnapCut AI Result",
+                                      text: shareText,
+                                      url: window.location.href,
+                                    });
+                                  } else {
+                                    navigator.clipboard.writeText(shareText);
+                                    alert("Link copied to clipboard!");
+                                  }
+                                }}
+                              >
                                 <Share2 className="w-4 h-4 mr-2" />
                                 Share
                               </Button>
@@ -255,10 +267,7 @@ export default function HistoryPage() {
                                   <AlertDialogAction
                                     className="bg-destructive"
                                     onClick={() => {
-                                      setDeletedIds([
-                                        ...deletedIds,
-                                        item.id || "",
-                                      ]);
+                                      deleteImage(item.id || "");
                                     }}
                                   >
                                     Delete

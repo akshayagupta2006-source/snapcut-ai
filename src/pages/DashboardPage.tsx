@@ -67,8 +67,7 @@ const quickActions = [
 ];
 
 export default function DashboardPage() {
-  const { imageHistory } = useImageHistory();
-  const [deletedIds, setDeletedIds] = useState<string[]>([]);
+  const { imageHistory, deleteImage } = useImageHistory();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Format timestamp to readable date
@@ -91,11 +90,6 @@ export default function DashboardPage() {
     if (hours > 0) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
     return "Just now";
   };
-
-  // Filter out deleted images
-  const visibleHistory = imageHistory.filter(
-    (img) => !deletedIds.includes(img.id || ""),
-  );
 
   // Calculate stats
   const totalProcessed = imageHistory.length;
@@ -443,7 +437,7 @@ export default function DashboardPage() {
                                 <AlertDialogAction
                                   className="bg-destructive"
                                   onClick={() => {
-                                    setDeletedIds([...deletedIds, item.id || ""]);
+                                    deleteImage(item.id || "");
                                   }}
                                 >
                                   Delete
