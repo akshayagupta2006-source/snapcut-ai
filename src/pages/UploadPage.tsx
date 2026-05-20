@@ -46,6 +46,8 @@ export default function UploadPage() {
   const [urlLoading, setUrlLoading] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraLoading, setCameraLoading] = useState(false);
+  // New state to capture detailed backend error messages
+  const [errorMessage, setErrorMessage] = useState<string>("");
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -234,7 +236,7 @@ export default function UploadPage() {
 
       // Determine API base URL - use local server for development
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || 
-                       (import.meta.env.DEV ? "http://localhost:5000" : window.location.origin);
+                       (import.meta.env.DEV ? "http://localhost:5001" : window.location.origin);
 
       console.log(
         "Sending request to local server:",
@@ -292,11 +294,13 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() ||
         return updatedHistory;
       });
       console.log("History updated.");
-    } catch (error) {
-      console.error("Error removing background:", error);
-      setStage("error");
-      setProgress(0);
-    }
+      } catch (error) {
+        console.error("Error removing background:", error);
+        const errMsg = error instanceof Error ? error.message : "Unknown error";
+        setErrorMessage(errMsg);
+        setStage("error");
+        setProgress(0);
+      }
   }, []);
 
   const handleDrop = useCallback(
@@ -868,31 +872,31 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() ||
                 )}
 
                 {/* Error */}
-                {stage === "error" && (
-                  <motion.div
-                    key="error"
-                    initial={{ opacity: 0, scale: 0.97 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.97 }}
-                    className="bg-card border border-destructive/30 rounded-2xl p-12 text-center"
-                  >
-                    <AlertCircle className="w-16 h-16 text-destructive mx-auto mb-6" />
-                    <h3 className="text-2xl font-display font-semibold text-foreground mb-3">
-                      ❌ Processing Failed
-                    </h3>
-                    <p className="text-base text-muted-foreground mb-8">
-                      Something went wrong while processing your image.
-                      <br />
-                      Please try again with a different image.
-                    </p>
-                    <button
-                      onClick={reset}
-                      className="px-8 py-3.5 bg-gradient-primary text-primary-foreground rounded-xl font-semibold hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/20"
-                    >
-                      🔄 Try Again
-                    </button>
-                  </motion.div>
-                )}
+{stage === "error" && (
+  <motion.div
+    key="error"
+    initial={{ opacity: 0, scale: 0.97 }}
+    animate={{ opacity: 1, scale: 1 }}
+    exit={{ opacity: 0, scale: 0.97 }}
+    className="bg-card border border-destructive/30 rounded-2xl p-12 text-center"
+  >
+    <AlertCircle className="w-16 h-16 text-destructive mx-auto mb-6" />
+    <h3 className="text-2xl font-display font-semibold text-foreground mb-3">
+      ❌ Processing Failed
+    </h3>
+    <p className="text-base text-muted-foreground mb-8">
+      {errorMessage || "Something went wrong while processing your image."}
+      <br />
+      Please try again with a different image.
+    </p>
+    <button
+      onClick={reset}
+      className="px-8 py-3.5 bg-gradient-primary text-primary-foreground rounded-xl font-semibold hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-primary/20"
+    >
+      🔄 Try Again
+    </button>
+  </motion.div>
+)}
               </>
             )}
 
