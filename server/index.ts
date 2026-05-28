@@ -1,281 +1,264 @@
-import express, { Express, Request, Response } from "express";
+import express, { Express, Request, Response, NextFunction } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import Razorpay from "razorpay";
-import crypto from "crypto";
 import axios from "axios";
 import FormDataImport from "form-data";
+import multer from "multer";
+import path from "path";
+import { fileURLToPath } from "url";
 const FormData = (FormDataImport as any).default || FormDataImport;
 
-dotenv.config();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 15 * 1024 * 1024, // 15MB upload limit
+  },
+  fileFilter: (_req: any, file: any, cb: any) => {
+    const isImage = file.mimetype?.startsWith?.("image/");
+    cb(null, Boolean(isImage));
+  },
+});
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.resolve(__dirname, ".env") });
 
 const app: Express = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
-app.use(cors());
-// Increase body size limit to 10MB for image processing
-app.use(express.json({ limit: '10mb' }));
-app.use(express.raw({ limit: '10mb', type: 'image/*' }));
+// Fallback API key if .env is not configured
+const REMOVE_BG_API_KEY = process.env.REMOVE_BG_API_KEY?.trim() || "AbS7TBp4NTCeTj3H9FNBagcp";
 
-// Initialize Razorpay with secret key (only on backend)
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || "",
-  key_secret: process.env.RAZORPAY_KEY_SECRET || "",
+console.log("Loaded backend .env from:", path.resolve(__dirname, ".env"));
+console.log(
+  "REMOVE_BG_API_KEY configured:",
+  Boolean(REMOVE_BG_API_KEY),
+);
+
+const allowedOrigins = [
+  process.env.FRONTEND_URL || "http://localhost:8080",
+  "http://127.0.0.1:8080",
+];
+
+// Middleware
+app.use(
+  cors({
+    origin: allowedOrigins,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+  }),
+);
+app.options("*", cors());
+
+// Request logging for API routes
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api")) {
+    console.log(
+      `[${new Date().toISOString()}] ${req.method} ${req.originalUrl} from ${req.ip} content-type=${req.headers["content-type"]}`,
+    );
+  }
+  next();
 });
+
+// Increase body size limit to 15MB for image processing
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+app.use(express.raw({ limit: '15mb', type: 'image/*' }));
+
+// Razorpay integration removed — payments are disabled in this build.
 
 // Health check endpoint
 app.get("/health", (req: Request, res: Response) => {
   res.json({ status: "Backend server is running ✅" });
 });
 
-// Create payment order
-app.post("/api/create-order", async (req: Request, res: Response) => {
-  console.log("Create order route hit");
-  try {
-    const { amount, currency = "INR", receipt } = req.body;
-
-    if (!amount) {
-      return res.status(400).json({ error: "Amount is required" });
-    }
-
-    // Check if Razorpay is properly configured
-    const keyId = process.env.RAZORPAY_KEY_ID;
-    const keySecret = process.env.RAZORPAY_KEY_SECRET;
-    
-    console.log("Razorpay Config Check:", {
-      keyIdConfigured: !!keyId,
-      keySecretConfigured: !!keySecret,
-      keyIdPrefix: keyId ? keyId.substring(0, 8) + "..." : "none"
-    });
-
-    if (!keyId || !keySecret) {
-      console.error("Razorpay credentials not configured properly");
-      return res.status(500).json({ 
-        error: "Payment system not configured. Please check server environment variables." 
-      });
-    }
-
-    const options = {
-      amount: amount * 100, // Convert to paise
-      currency,
-      receipt: receipt || `receipt-${Date.now()}`,
-    };
-
-    console.log("Creating Razorpay order:", options);
-    const order = await razorpay.orders.create(options);
-    console.log("Order created successfully:", order.id);
-
-    res.json({
-      success: true,
-      orderId: order.id,
-      amount: order.amount,
-      currency: order.currency,
-    });
-  } catch (error: any) {
-    console.error("Error creating order:", error);
-    console.error("Error details:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
-    
-    let errorMessage = "Failed to create order";
-    if (error.error) {
-      errorMessage += ": " + (error.error.description || JSON.stringify(error.error));
-    }
-    
-    res.status(500).json({ 
-      error: errorMessage,
-      details: error.message 
-    });
-  }
-});
-
-// Verify payment signature
-app.post("/api/verify-payment", (req: Request, res: Response) => {
-  try {
-    const { orderId, paymentId, signature } = req.body;
-
-    if (!orderId || !paymentId || !signature) {
-      return res
-        .status(400)
-        .json({ error: "Missing required payment details" });
-    }
-
-    // Verify signature using Razorpay's method
-    const hmac = crypto.createHmac(
-      "sha256",
-      process.env.RAZORPAY_KEY_SECRET || ""
-    );
-    hmac.update(`${orderId}|${paymentId}`);
-    const generatedSignature = hmac.digest("hex");
-
-    if (generatedSignature === signature) {
-      // Payment is valid
-      res.json({
-        success: true,
-        message: "Payment verified successfully",
-        paymentId,
-      });
-    } else {
-      // Payment is invalid
-      res.status(400).json({
-        success: false,
-        error: "Payment verification failed",
-      });
-    }
-  } catch (error) {
-    console.error("Error verifying payment:", error);
-    res.status(500).json({ error: "Failed to verify payment" });
-  }
-});
-
-// Get payment details
-app.post("/api/payment-details", async (req: Request, res: Response) => {
-  try {
-    const { paymentId } = req.body;
-
-    if (!paymentId) {
-      return res.status(400).json({ error: "Payment ID is required" });
-    }
-
-    const payment = await razorpay.payments.fetch(paymentId);
-
-    res.json({
-      success: true,
-      payment: {
-        id: payment.id,
-        amount: payment.amount / 100, // Convert from paise to rupees
-        currency: payment.currency,
-        status: payment.status,
-        method: payment.method,
-        email: payment.email,
-        contact: payment.contact,
-        created_at: payment.created_at,
-      },
-    });
-  } catch (error) {
-    console.error("Error fetching payment details:", error);
-    res.status(500).json({ error: "Failed to fetch payment details" });
-  }
-});
-
-// Webhook endpoint for Razorpay events
-app.post("/api/webhook", (req: Request, res: Response) => {
-  try {
-    const secret = process.env.RAZORPAY_WEBHOOK_SECRET || "";
-    const signature = req.headers["x-razorpay-signature"];
-
-    if (!signature) {
-      return res.status(400).json({ error: "Signature missing" });
-    }
-
-    const body = JSON.stringify(req.body);
-    const hmac = crypto.createHmac("sha256", secret);
-    hmac.update(body);
-    const generatedSignature = hmac.digest("hex");
-
-    if (generatedSignature === signature) {
-      const event = req.body.event;
-      const data = req.body.payload.payment.entity;
-
-      if (event === "payment.authorized") {
-        if (process.env.NODE_ENV === "development") {
-          console.log("✅ Payment authorized:", data.id);
-        }
-        // Handle payment authorized event
-      } else if (event === "payment.failed") {
-        if (process.env.NODE_ENV === "development") {
-          console.log("❌ Payment failed:", data.id);
-        }
-        // Handle payment failed event
-      } else if (event === "payment.captured") {
-        if (process.env.NODE_ENV === "development") {
-          console.log("✅ Payment captured:", data.id);
-        }
-        // Handle payment captured event
-      }
-
-      res.json({ status: "ok" });
-    } else {
-      res.status(400).json({ error: "Signature verification failed" });
-    }
-  } catch (error) {
-    console.error("Webhook error:", error);
-    res.status(500).json({ error: "Webhook processing failed" });
-  }
-});
+// Payment routes and Razorpay integration removed.
 
 // Background removal endpoint using remove.bg API
-app.post("/api/remove-background", async (req: Request, res: Response) => {
-  try {
-    const apiKey = process.env.REMOVE_BG_API_KEY;
-    
-    if (!apiKey) {
-      return res.status(500).json({ 
-        error: "Background removal API key not configured. Please set REMOVE_BG_API_KEY environment variable." 
-      });
-    }
+app.post(
+  "/api/remove-background",
+  upload.single("image"),
+  async (req: Request, res: Response) => {
+    try {
+      console.log("/api/remove-background handler started");
+      console.log("REMOVE_BG_API_KEY configured:", Boolean(REMOVE_BG_API_KEY));
+      console.log("Content-Type:", req.headers["content-type"]);
+      console.log("Request body keys:", Object.keys(req.body || {}));
+      console.log("File present:", Boolean((req as any).file));
 
-    // Get image from request body (base64) or raw buffer
-    let imageBuffer: Buffer;
-    
-    if (req.body && req.body.image) {
-      // Handle base64 encoded image
-      const base64Data = req.body.image.replace(/^data:image\/\w+;base64,/, "");
-      imageBuffer = Buffer.from(base64Data, "base64");
-    } else if (req.get("Content-Type")?.includes("image/")) {
-      // Handle raw image data
-      imageBuffer = req.body;
-    } else {
-      return res.status(400).json({ error: "No image data provided" });
-    }
-
-    // Call remove.bg API
-    const formData = new FormData();
-    formData.append("image_file", imageBuffer, { filename: "image.png" });
-
-    const response = await axios.post(
-      "https://api.remove.bg/v1.0/removebg",
-      formData,
-      {
-        headers: {
-          ...formData.getHeaders(),
-          "X-Api-Key": apiKey,
-        },
-        responseType: "arraybuffer",
+      if (!REMOVE_BG_API_KEY) {
+        console.error("REMOVE_BG_API_KEY is missing or empty");
+        return res.status(503).json({
+          error:
+            "Background removal API key not configured. Please set REMOVE_BG_API_KEY in server/.env.",
+        });
       }
-    );
 
-    // Convert response to base64
-    const resultBase64 = Buffer.from(response.data).toString("base64");
-    const imageUrl = `data:image/png;base64,${resultBase64}`;
+      const file = (req as any).file as {
+        buffer?: Buffer;
+        mimetype?: string;
+        originalname?: string;
+      } | undefined;
 
-    res.json({ 
-      success: true, 
-      url: imageUrl 
-    });
-  } catch (error: any) {
-    console.error("Background removal error:", error.response?.data || error.message);
-    
-    if (error.response?.status === 401) {
-      return res.status(401).json({ 
-        error: "Invalid API key. Please check your REMOVE_BG_API_KEY." 
+      let imageBuffer: Buffer | null = null;
+      let mimeType = "image/png";
+      let filename = "upload.png";
+
+      if (file && file.buffer && file.mimetype?.startsWith("image/")) {
+        imageBuffer = file.buffer;
+        mimeType = file.mimetype;
+        filename = file.originalname || filename;
+        console.log(
+          "Received uploaded file:",
+          filename,
+          mimeType,
+          "size=",
+          imageBuffer.length,
+        );
+      } else if (typeof req.body?.image === "string") {
+        const base64Data = (req.body as any).image.replace(
+          /^data:image\/\w+;base64,/, 
+          "",
+        );
+        imageBuffer = Buffer.from(base64Data, "base64");
+        console.log("Received base64 image payload. size=", imageBuffer.length);
+      }
+
+      if (!imageBuffer) {
+        console.error("No valid image found in request", {
+          contentType: req.headers["content-type"],
+          bodyKeys: Object.keys(req.body || {}),
+          hasFile: Boolean(file),
+        });
+        return res.status(400).json({
+          error:
+            "No image uploaded. Please send a valid image file using the 'image' field.",
+        });
+      }
+
+      if (imageBuffer.length === 0) {
+        return res.status(400).json({ error: "Uploaded image is empty." });
+      }
+
+      if (imageBuffer.length > 15 * 1024 * 1024) {
+        console.error("Uploaded image exceeds size limit.", imageBuffer.length);
+        return res.status(413).json({
+          error: "Image size exceeds 15MB limit. Please upload a smaller image.",
+        });
+      }
+
+      const formData = new FormData();
+      formData.append("image_file", imageBuffer, {
+        filename,
+        contentType: mimeType,
+      });
+      formData.append("size", "auto");
+
+      const headers = {
+        ...formData.getHeaders(),
+        "X-Api-Key": REMOVE_BG_API_KEY,
+      };
+      console.log(
+        "Calling remove.bg with endpoint: https://api.remove.bg/v1.0/removebg",
+      );
+      console.log(
+        "remove.bg request headers sample:",
+        typeof headers["content-type"] === "string"
+          ? headers["content-type"].slice(0, 120)
+          : headers["content-type"],
+      );
+
+      const response = await axios.post("https://api.remove.bg/v1.0/removebg", formData, {
+        headers,
+        responseType: "arraybuffer",
+      });
+
+      console.log("remove.bg response status:", response.status, response.statusText);
+      const resultBase64 = Buffer.from(response.data).toString("base64");
+      return res.json({
+        success: true,
+        url: `data:image/png;base64,${resultBase64}`,
+      });
+    } catch (error: any) {
+      console.error("Background removal error raw:", error);
+
+      const status = error.response?.status;
+      const statusText = error.response?.statusText;
+      let details = error.message;
+
+      if (error.response?.data) {
+        try {
+          details = Buffer.from(error.response.data).toString("utf8");
+        } catch (_) {
+          details = JSON.stringify(error.response.data);
+        }
+      }
+
+      console.error("Background removal error parsed:", {
+        status,
+        statusText,
+        details,
+      });
+
+      if (status === 401) {
+        return res.status(401).json({
+          error: "Invalid API key. Please verify REMOVE_BG_API_KEY in server/.env.",
+          details,
+        });
+      }
+
+      if (status === 403) {
+        return res.status(403).json({
+          error:
+            "Forbidden: remove.bg rejected your API key or account permissions.",
+          details,
+        });
+      }
+
+      if (status === 402) {
+        return res.status(402).json({
+          error: "API credits exhausted. Please upgrade your remove.bg plan.",
+          details,
+        });
+      }
+
+      if (status && status >= 400 && status < 500) {
+        return res.status(status).json({
+          error: "remove.bg request failed.",
+          details,
+        });
+      }
+
+      return res.status(500).json({
+        error: "Failed to remove background.",
+        details,
       });
     }
-    
-    if (error.response?.status === 402) {
-      return res.status(402).json({ 
-        error: "API credits exhausted. Please upgrade your remove.bg plan." 
+  },
+);
+
+app.use(
+  (err: any, _req: Request, res: Response, next: NextFunction) => {
+    console.error("Unhandled server error:", err);
+
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(413).json({
+        error: "Uploaded image exceeds the 15MB limit. Please upload a smaller file.",
       });
     }
 
-    res.status(500).json({ 
-      error: "Failed to remove background", 
-      details: error.response?.data ? error.response.data.toString() : error.message 
+    if (res.headersSent) {
+      return next(err);
+    }
+    res.status(err.status || 500).json({
+      error: err.message || "Internal Server Error",
+      details: err.stack ? err.stack.toString() : undefined,
     });
-  }
-});
+  },
+);
 
 app.listen(PORT, () => {
-  console.log(
-    `🚀 Backend server running on http://localhost:${PORT}`
-  );
+  console.log(`🚀 Backend server running on http://localhost:${PORT}`);
 });

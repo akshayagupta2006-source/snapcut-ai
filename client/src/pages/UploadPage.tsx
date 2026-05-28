@@ -15,7 +15,7 @@ import {
   Play,
   CameraOff,
 } from "lucide-react";
-import { useLocation, useSearchParams, useNavigate } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import HistoryTab from "@/components/HistoryTab";
@@ -54,153 +54,7 @@ export default function UploadPage() {
 
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
 
-  const handleUpgradeToPro = useCallback(async () => {
-    if (import.meta.env.DEV) {
-      console.log("handleUpgradeToPro called");
-    }
-
-    // Check if Razorpay SDK is loaded
-    if (!(window as any).Razorpay) {
-      console.error(
-        "Razorpay SDK not loaded. Check if the script is loaded in index.html.",
-      );
-      // Wait a bit and retry for slow mobile connections
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      if (!(window as any).Razorpay) {
-        alert("Payment system is loading. Please try again in a few seconds.");
-        return;
-      }
-    }
-
-    try {
-      // Get user data from localStorage
-      const userInfo = localStorage.getItem("user");
-      const userData = userInfo ? JSON.parse(userInfo) : null;
-
-      // Step 1: Create order on backend
-      // Use environment variable for API URL, fallback to current origin for production
-      // This ensures mobile devices use the correct deployed URL
-      let apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
-      if (!apiBaseUrl) {
-        apiBaseUrl = window.location.origin;
-      }
-      // Remove trailing slash if present
-      apiBaseUrl = apiBaseUrl.replace(/\/$/, '');
-
-      console.log("Using API Base URL:", apiBaseUrl);
-
-      const orderResponse = await fetch(
-        `${apiBaseUrl}/api/create-order`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            amount: 500, // INR 500
-            currency: "INR",
-            receipt: `receipt-${Date.now()}`,
-          }),
-        }
-      );
-
-      if (!orderResponse.ok) {
-        const errorText = await orderResponse.text();
-        console.error("Order creation failed:", orderResponse.status, errorText);
-        throw new Error(`Failed to create order: ${orderResponse.status}`);
-      }
-
-      const orderData = await orderResponse.json();
-      const orderId = orderData.orderId;
-
-      if (!orderId) {
-        throw new Error("No order ID received from server");
-      }
-
-      console.log("Order created:", orderId);
-
-      // Step 2: Open Razorpay payment with order ID
-      const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-        order_id: orderId,
-        amount: 50000, // Amount in paise (₹500 * 100)
-        currency: "INR",
-        name: "SnapCut AI",
-        description: "Upgrade to Pro Plan",
-        handler: async function (response: any) {
-          console.log("Payment response:", response);
-
-          // Step 3: Verify payment on backend
-          try {
-            const verifyResponse = await fetch(
-              `${apiBaseUrl}/api/verify-payment`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  orderId: response.razorpay_order_id,
-                  paymentId: response.razorpay_payment_id,
-                  signature: response.razorpay_signature,
-                }),
-              }
-            );
-
-            const verifyData = await verifyResponse.json();
-
-            if (verifyData.success) {
-              // Update user plan in localStorage
-              if (userData) {
-                userData.plan = "pro";
-                userData.credits = 1000;
-                userData.planUpgradeDate = new Date().toISOString();
-                localStorage.setItem("user", JSON.stringify(userData));
-              }
-              alert("✅ Payment Successful! You've been upgraded to Pro.");
-              navigate("/dashboard");
-            } else {
-              console.error("Payment verification failed:", verifyData);
-              alert("❌ Payment verification failed. Please contact support with payment ID: " + response.razorpay_payment_id);
-            }
-          } catch (verifyError) {
-            console.error("Verification error:", verifyError);
-            alert("⚠️ Payment made but verification failed. Please contact support with payment ID: " + response.razorpay_payment_id);
-          }
-        },
-        prefill: {
-          name: userData ? `${userData.firstName} ${userData.lastName}` : "",
-          email: userData?.email || "",
-          contact: userData?.phone || "",
-        },
-        theme: {
-          color: "#3399cc",
-        },
-        // Mobile-specific optimizations
-        modal: {
-          ondismiss: function() {
-            console.log("Payment modal dismissed");
-          }
-        }
-      };
-
-      const rzp1 = new (window as any).Razorpay(options);
-
-      // Handle payment errors
-      rzp1.on('payment.failed', function(response: any) {
-        console.error("Payment failed:", response.error);
-        alert("❌ Payment failed: " + (response.error.description || "Please try again"));
-      });
-
-      rzp1.open();
-    } catch (error) {
-      console.error("Error during payment:", error);
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      alert("Failed to process payment: " + errorMessage + ". Please try again.");
-    }
-  }, [navigate]);
 
   const handleFile = useCallback(async (file: File) => {
     console.log(
@@ -210,8 +64,10 @@ export default function UploadPage() {
       file.size,
     );
     if (!file.type.startsWith("image/")) {
+      const invalidTypeMessage = "Please upload a valid image file (JPG, PNG, WEBP).";
       console.log("File is not an image:", file.type);
-      alert("Please upload a valid image file.");
+      setErrorMessage(invalidTypeMessage);
+      setStage("error");
       return;
     }
 
@@ -223,44 +79,72 @@ export default function UploadPage() {
     setProgress(10);
 
     try {
-      console.log("Reading file as base64...");
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-      console.log("File converted to base64. Length:", base64.length);
+      console.log("Preparing image upload...");
+
+      if (file.size > 15 * 1024 * 1024) {
+        const sizeError =
+          "Image is too large. Please upload an image smaller than 15MB.";
+        console.error(sizeError, file.size);
+        setErrorMessage(sizeError);
+        setStage("error");
+        setProgress(0);
+        return;
+      }
 
       setProgress(30);
 
-      // Determine API base URL - use local server for development
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || 
-                       (import.meta.env.DEV ? "http://localhost:5001" : window.location.origin);
+      // Determine API endpoint.
+      // In development, use Vite proxy by sending relative /api calls.
+      // In production, use VITE_API_URL or VITE_API_BASE_URL if configured.
+      const envApiBaseUrl =
+        import.meta.env.VITE_API_BASE_URL?.trim() ||
+        import.meta.env.VITE_API_URL?.trim();
+      const apiBaseUrl = envApiBaseUrl ? envApiBaseUrl.replace(/\/$/, "") : "";
+      const apiEndpoint = apiBaseUrl
+        ? `${apiBaseUrl}/api/remove-background`
+        : "/api/remove-background";
 
       console.log(
-        "Sending request to local server:",
-        `${apiBaseUrl}/api/remove-background`,
+        "Resolved remove-background endpoint:",
+        apiEndpoint,
+        "(apiBaseUrl=", apiBaseUrl || "(proxy)", ")",
       );
-      
-      const response = await fetch(`${apiBaseUrl}/api/remove-background`, {
+
+      const formData = new FormData();
+      formData.append("image", file, file.name);
+
+      console.log("Sending image upload. file:", file.name, file.type, file.size);
+
+      const response = await fetch(apiEndpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ image: base64 }),
+        body: formData,
       });
 
       setProgress(70);
       console.log("Server response received. Status:", response.status);
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Server response not OK. Error:", errorText);
-        setStage("error");
-        throw new Error(
-          `HTTP error! status: ${response.status}, message: ${errorText}`,
+        const bodyText = await response.text();
+        let parsedError: any = null;
+        try {
+          parsedError = JSON.parse(bodyText);
+        } catch {
+          parsedError = null;
+        }
+
+        const errorText =
+          parsedError?.error || parsedError?.message || bodyText ||
+          `HTTP ${response.status} Error`;
+        console.error(
+          "Server response not OK. Status:",
+          response.status,
+          "error:",
+          errorText,
         );
+        setErrorMessage(errorText);
+        setStage("error");
+        setProgress(0);
+        return;
       }
 
       console.log("Parsing JSON response...");
@@ -565,9 +449,7 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() ||
 
     const action = searchParams.get("action");
     console.log("Action from URL:", action);
-    if (action === "upgrade_pro" || action === "buy_credits") {
-      handleUpgradeToPro();
-    }
+    // Payment functionality removed
 
     return () => {
       // Cleanup: Stop camera when component unmounts
@@ -575,7 +457,7 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() ||
         streamRef.current.getTracks().forEach((track) => track.stop());
       }
     };
-  }, [location.search, searchParams, handleUpgradeToPro]);
+  }, [location.search, searchParams]);
 
   return (
     <div
@@ -632,15 +514,6 @@ const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() ||
                 }`}
               >
                 📋 History ({imageHistory.length})
-              </button>
-            </div>
-
-            <div className="mt-6 md:mt-8">
-              <button
-                onClick={handleUpgradeToPro}
-                className="px-6 py-2.5 md:px-8 md:py-3 rounded-xl font-semibold text-xs md:text-sm transition-all hover:opacity-90 active:scale-95 bg-gradient-primary text-primary-foreground cursor-pointer shadow-lg shadow-primary/30 min-h-[44px] touch-target"
-              >
-                ⭐ Upgrade to Pro
               </button>
             </div>
           </motion.div>
